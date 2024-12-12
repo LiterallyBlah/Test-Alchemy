@@ -97,8 +97,4 @@ This project is licensed under the [MIT Licence](LICENSE).
 
 Contributions are welcome! Feel free to open an issue or submit a pull request.
 
----
-
-## 🌐 **Links**
-
-- **GitHub**: [https://github.com/yourusername/test-alchemy](https://github.com/yourusername/test-alchemy)
+--
