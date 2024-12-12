@@ -4,17 +4,22 @@ import (
 	"net/http"
 
 	"TestAlchemy/cmd/web"
+	"TestAlchemy/internal/database"
+	"TestAlchemy/internal/handlers"
+	"TestAlchemy/internal/middleware"
+	"TestAlchemy/internal/services"
+	"TestAlchemy/internal/session"
 	"github.com/a-h/templ"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	echomiddleware "github.com/labstack/echo/v4/middleware"
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
 	e := echo.New()
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
+	e.Use(echomiddleware.Logger())
+	e.Use(echomiddleware.Recover())
 
-	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+	e.Use(echomiddleware.CORSWithConfig(echomiddleware.CORSConfig{
 		AllowOrigins:     []string{"https://*", "http://*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowHeaders:     []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
@@ -22,15 +27,30 @@ func (s *Server) RegisterRoutes() http.Handler {
 		MaxAge:           300,
 	}))
 
+	// Initialize services and handlers
+	db := database.New()
+	sessionStore, err := session.NewStore()
+	if err != nil {
+		panic(err)
+	}
+	userService := services.NewUserService(db, sessionStore)
+	userHandler := handlers.NewUserHandler(userService)
+
 	fileServer := http.FileServer(http.FS(web.Files))
 	e.GET("/assets/*", echo.WrapHandler(fileServer))
 
+	// Public routes
 	e.GET("/web", echo.WrapHandler(templ.Handler(web.HelloForm())))
 	e.POST("/hello", echo.WrapHandler(http.HandlerFunc(web.HelloWebHandler)))
-
-	e.GET("/", s.HelloWorldHandler)
-
+	e.POST("/api/register", echo.WrapHandler(http.HandlerFunc(userHandler.Register)))
+	e.POST("/api/login", echo.WrapHandler(http.HandlerFunc(userHandler.Login)))
 	e.GET("/health", s.healthHandler)
+
+	// Protected routes - require authentication
+	protected := e.Group("")
+	protected.Use(middleware.RequireAuth(sessionStore))
+	protected.GET("/", s.HelloWorldHandler)
+	// Add other protected routes here
 
 	return e
 }

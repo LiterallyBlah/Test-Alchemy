@@ -8,9 +8,11 @@ import (
 	"strconv"
 	"time"
 
+	"TestAlchemy/internal/models"
+
+	_ "github.com/joho/godotenv/autoload"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	_ "github.com/joho/godotenv/autoload"
 )
 
 // Service represents a service that interacts with a database.
@@ -66,12 +68,18 @@ func New() Service {
 		log.Fatal(err)
 	}
 
+	// Auto-migrate the schema
+	err = db.AutoMigrate(&models.User{})
+	if err != nil {
+		log.Fatalf("Failed to migrate database schema: %v", err)
+	}
+
 	// Configure connection pool
 	sqlDB, err := db.DB()
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	sqlDB.SetMaxIdleConns(50)
 	sqlDB.SetMaxOpenConns(50)
 	sqlDB.SetConnMaxLifetime(time.Hour)
