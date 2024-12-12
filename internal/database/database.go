@@ -25,6 +25,18 @@ type Service interface {
 
 	// DB returns the underlying GORM database instance
 	DB() *gorm.DB
+
+	// Create creates a new record in the database
+	Create(ctx context.Context, value interface{}) error
+
+	// Read retrieves a record from the database
+	Read(ctx context.Context, dest interface{}, query interface{}, args ...interface{}) error
+
+	// Update updates a record in the database
+	Update(ctx context.Context, value interface{}) error
+
+	// Delete deletes a record from the database
+	Delete(ctx context.Context, value interface{}) error
 }
 
 type service struct {
@@ -131,4 +143,28 @@ func (s *service) Close() error {
 // DB returns the underlying GORM database instance
 func (s *service) DB() *gorm.DB {
 	return s.db
+}
+
+// Create implements Service
+func (s *service) Create(ctx context.Context, value interface{}) error {
+	result := s.db.WithContext(ctx).Create(value)
+	return result.Error
+}
+
+// Read implements Service
+func (s *service) Read(ctx context.Context, dest interface{}, query interface{}, args ...interface{}) error {
+	result := s.db.WithContext(ctx).Where(query, args...).First(dest)
+	return result.Error
+}
+
+// Update implements Service
+func (s *service) Update(ctx context.Context, value interface{}) error {
+	result := s.db.WithContext(ctx).Save(value)
+	return result.Error
+}
+
+// Delete implements Service
+func (s *service) Delete(ctx context.Context, value interface{}) error {
+	result := s.db.WithContext(ctx).Delete(value)
+	return result.Error
 }
